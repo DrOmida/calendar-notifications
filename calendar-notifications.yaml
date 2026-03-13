@@ -231,10 +231,7 @@ blueprint:
             - `{{ trigger.calendar_event.start }}` — event start
 
             - `{{ trigger.calendar_event.description }}` — event description
-          default: >-
-            📅 Reminder: {{ trigger.calendar_event.summary }}
-            📆 When: {{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%A %d %B %Y at %H:%M') }}
-            🗓 Agenda: https://calendar.google.com/calendar/r/day/{{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%Y/%m/%d') }}
+          default: "📅 Reminder: {{ trigger.calendar_event.summary }}\n📆 When: {{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%A %d %B %Y at %H:%M') }}\n🗓 Agenda: https://calendar.google.com/calendar/r/day/{{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%Y/%m/%d') }}"
           selector:
             text:
               multiline: true
@@ -277,8 +274,7 @@ blueprint:
 
         html5_message:
           name: HTML5 Notification Message
-          default: >-
-            {{ trigger.calendar_event.summary }} — {{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%A %d %B at %H:%M') }}
+          default: "{{ trigger.calendar_event.summary }} — {{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%A %d %B at %H:%M') }}"
           selector:
             text:
               multiline: true
@@ -549,8 +545,7 @@ action:
         sequence:
           - action: "{{ whatsapp_service }}"
             data:
-              message: >-
-                {{ whatsapp_message | trim }}
+              message: "{{ whatsapp_message }}"
 
   # ── HTML5 ───────────────────────────────────────────────────────────────────
   - choose:
@@ -561,10 +556,8 @@ action:
         sequence:
           - action: "{{ html5_notify_target }}"
             data:
-              title: >-
-                {{ html5_title | trim }}
-              message: >-
-                {{ html5_message | trim }}
+              title: "{{ html5_title }}"
+              message: "{{ html5_message }}"
               data:
                 url: "{{ html5_url }}"
 
