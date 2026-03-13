@@ -211,6 +211,18 @@ blueprint:
                   value: "enable_whatsapp_notify"
                 - label: Disable WhatsApp Notification
                   value: "disable_whatsapp_notify"
+        whatsapp_service:
+          name: WhatsApp - REST Command Service
+          description: >
+            Select the REST command service to use for sending WhatsApp messages.
+            These are the `rest_command.*` services configured in your `configuration.yaml`.
+            For example if you have `rest_command.whatsapp`, select `whatsapp` from the list.
+          default: rest_command.whatsapp
+          selector:
+            select:
+              custom_value: true
+              options:
+                - rest_command.whatsapp
         whatsapp_message:
           name: WhatsApp - Message
           description: >
@@ -251,14 +263,17 @@ blueprint:
                 - label: Disable HTML5 Notification
                   value: "disable_html5_notify"
         html5_notify_target:
-          name: HTML5 - Notification Target
+          name: HTML5 - Notification Service
           description: >
-            Enter the target for the HTML5 notification. This is the name after `notify.` for your HTML5 integration.
-            For example, if your service is `notify.html5`, enter `html5`.
-            If you have a named target like `notify.html5_john`, enter `html5_john`.
-          default: "html5"
+            Select the HTML5 notify service for browser push notifications.
+            Pick the notify.* service matching your HTML5 integration.
+            You can also type a custom value if yours is not listed (e.g. notify.html5_john).
+          default: notify.html5
           selector:
-            text:
+            select:
+              custom_value: true
+              options:
+                - notify.html5
         html5_title:
           name: HTML5 - Title
           description: >
@@ -646,6 +661,7 @@ variables:
   start_notify_icon: !input start_notify_icon
   start_notify_icon_colour: !input start_notify_icon_colour
   include_whatsapp_notify: !input include_whatsapp_notify
+  whatsapp_service: !input whatsapp_service
   whatsapp_message: !input whatsapp_message
   include_html5_notify: !input include_html5_notify
   html5_notify_target: !input html5_notify_target
@@ -785,7 +801,7 @@ action:
               - condition: template
                 value_template: "{{ include_whatsapp_notify == 'enable_whatsapp_notify' }}"
             sequence:
-              - action: rest_command.whatsapp
+              - action: "{{ whatsapp_service }}"
                 data:
                   message: "{{ whatsapp_message }}"
 
@@ -796,7 +812,7 @@ action:
               - condition: template
                 value_template: "{{ include_html5_notify == 'enable_html5_notify' }}"
             sequence:
-              - action: "notify.{{ html5_notify_target }}"
+              - action: "{{ html5_notify_target }}"
                 data:
                   title: "{{ html5_title }}"
                   message: "{{ html5_message }}"
