@@ -548,8 +548,7 @@ action:
       sequence:
         - action: "{{ whatsapp_service }}"
           data:
-            message: "{{ whatsapp_message }}"', event_summary)
-                  | replace('{{ trigger.calendar_event.description }}', event_description) }}
+            message: "{{ whatsapp_message }}"
 
   # ── HTML5 ───────────────────────────────────────────────────────────────────
   - choose:
