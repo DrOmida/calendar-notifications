@@ -232,8 +232,9 @@ blueprint:
 
             - `{{ trigger.calendar_event.description }}` — event description
           default: >-
-            📅 In 1 day you have: {{ trigger.calendar_event.summary }}
-            🗓 View your agenda: https://calendar.google.com
+            📅 Reminder: {{ trigger.calendar_event.summary }}
+            📆 When: {{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%A %d %B %Y at %H:%M') }}
+            🗓 Agenda: https://calendar.google.com/calendar/r/day/{{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%Y/%m/%d') }}
           selector:
             text:
               multiline: true
@@ -276,7 +277,8 @@ blueprint:
 
         html5_message:
           name: HTML5 Notification Message
-          default: "In 1 day you have: {{ trigger.calendar_event.summary }}"
+          default: >-
+            {{ trigger.calendar_event.summary }} — {{ trigger.calendar_event.start | as_timestamp | timestamp_custom('%A %d %B at %H:%M') }}
           selector:
             text:
               multiline: true
@@ -428,30 +430,6 @@ blueprint:
           selector:
             action:
 
-    # ── Test Mode ──────────────────────────────────────────────────────────────
-    test_settings:
-      name: "🧪 Test Mode (Optional)"
-      icon: mdi:flask-outline
-      collapsed: true
-      input:
-        test_event_name:
-          name: Test — Fake Event Name
-          description: >
-            The fake calendar event name used when running a test.
-            Replaces `{{ trigger.calendar_event.summary }}` in your messages.
-          default: "Test Event"
-          selector:
-            text:
-
-        test_event_description:
-          name: Test — Fake Event Description
-          description: >
-            The fake event description used when running a test.
-            Replaces `{{ trigger.calendar_event.description }}` in your messages.
-          default: "This is a test notification from your calendar blueprint."
-          selector:
-            text:
-
     # ── Global Conditions ──────────────────────────────────────────────────────
     global_conditions_settings:
       name: "Global Conditions (Optional)"
@@ -509,102 +487,57 @@ variables:
   start_action_2: !input start_action_2
   start_action_3: !input start_action_3
   global_conditions: !input global_conditions
-  test_event_name: !input test_event_name
-  test_event_description: !input test_event_description
 
 triggers:
   - trigger: calendar
-    id: "calendar_trigger"
     event: start
     entity_id: !input calendar
     offset: !input notify_offset
-  - trigger: event
-    id: "test_trigger"
-    event_type: blueprint_calendar_test
-    event_data:
-      automation_id: "{{ this.entity_id }}"
 
 condition:
+  - condition: template
+    value_template: >-
+      {{ ('enable_start_notify_options' in include_start_notify)
+         or ('enable_start_action_1' in include_start_auto_actions)
+         or ('enable_start_action_2' in include_start_auto_actions)
+         or ('enable_start_action_3' in include_start_auto_actions)
+         or (include_whatsapp_notify == 'enable_whatsapp_notify')
+         or (include_html5_notify == 'enable_html5_notify') }}
+
   - condition: or
     conditions:
-      - alias: "Test trigger — always allow"
+      - alias: "No keyword filtering"
         condition: template
-        value_template: "{{ trigger.id == 'test_trigger' }}"
-      - alias: "Calendar trigger — check notifications enabled"
+        value_template: "{{ include_calendar_trigger == 'disable_key_word' }}"
+      - alias: "Include keyword"
         condition: and
         conditions:
           - condition: template
-            value_template: >-
-              {{ ('enable_start_notify_options' in include_start_notify)
-                 or ('enable_start_action_1' in include_start_auto_actions)
-                 or ('enable_start_action_2' in include_start_auto_actions)
-                 or ('enable_start_action_3' in include_start_auto_actions)
-                 or (include_whatsapp_notify == 'enable_whatsapp_notify')
-                 or (include_html5_notify == 'enable_html5_notify') }}
-          - condition: or
-            conditions:
-              - alias: "No keyword filtering"
-                condition: template
-                value_template: "{{ include_calendar_trigger == 'disable_key_word' }}"
-              - alias: "Include keyword"
-                condition: and
-                conditions:
-                  - condition: template
-                    value_template: "{{ include_calendar_trigger == 'enable_key_word' }}"
-                  - condition: template
-                    value_template: >
-                      {% set keywords = (calendar_trigger or '') | string %}
-                      {% set keyword_list = keywords.split(',') | map('trim') | list %}
-                      {% set summary = trigger.calendar_event.get('summary', '') %}
-                      {% set description = trigger.calendar_event.get('description', '') %}
-                      {{ keyword_list | select('in', summary ~ description) | list | count > 0 }}
-              - alias: "Exclude keyword"
-                condition: and
-                conditions:
-                  - condition: template
-                    value_template: "{{ include_calendar_trigger == 'exclude_key_word' }}"
-                  - condition: template
-                    value_template: >
-                      {% set keywords = (calendar_trigger or '') | string %}
-                      {% set keyword_list = keywords.split(',') | map('trim') | list %}
-                      {% set summary = trigger.calendar_event.get('summary', '') %}
-                      {% set description = trigger.calendar_event.get('description', '') %}
-                      {{ keyword_list | select('in', summary ~ description) | list | count == 0 }}
-          - condition: and
-            conditions: !input global_conditions
+            value_template: "{{ include_calendar_trigger == 'enable_key_word' }}"
+          - condition: template
+            value_template: >
+              {% set keywords = (calendar_trigger or '') | string %}
+              {% set keyword_list = keywords.split(',') | map('trim') | list %}
+              {% set summary = trigger.calendar_event.get('summary', '') %}
+              {% set description = trigger.calendar_event.get('description', '') %}
+              {{ keyword_list | select('in', summary ~ description) | list | count > 0 }}
+      - alias: "Exclude keyword"
+        condition: and
+        conditions:
+          - condition: template
+            value_template: "{{ include_calendar_trigger == 'exclude_key_word' }}"
+          - condition: template
+            value_template: >
+              {% set keywords = (calendar_trigger or '') | string %}
+              {% set keyword_list = keywords.split(',') | map('trim') | list %}
+              {% set summary = trigger.calendar_event.get('summary', '') %}
+              {% set description = trigger.calendar_event.get('description', '') %}
+              {{ keyword_list | select('in', summary ~ description) | list | count == 0 }}
+
+  - condition: and
+    conditions: !input global_conditions
 
 action:
-
-  # ── Resolve event data (real or test) ──────────────────────────────────────
-  - variables:
-      event_summary: >-
-        {% if trigger.id == 'test_trigger' %}
-          {{ test_event_name }}
-        {% else %}
-          {{ trigger.calendar_event.get('summary', '') }}
-        {% endif %}
-      event_description: >-
-        {% if trigger.id == 'test_trigger' %}
-          {{ test_event_description }}
-        {% else %}
-          {{ trigger.calendar_event.get('description', '') }}
-        {% endif %}
-      resolved_whatsapp_message: >-
-        {{ whatsapp_message
-            | replace('trigger.calendar_event.summary', 'event_summary')
-            | replace('trigger.calendar_event.description', 'event_description') }}
-      resolved_html5_message: >-
-        {{ html5_message
-            | replace('trigger.calendar_event.summary', 'event_summary')
-            | replace('trigger.calendar_event.description', 'event_description') }}
-      resolved_start_title: >-
-        {{ start_title
-            | replace('trigger.calendar_event.summary', 'event_summary')
-            | replace('trigger.calendar_event.description', 'event_description') }}
-      resolved_start_message: >-
-        {{ start_message
-            | replace('trigger.calendar_event.summary', 'event_summary')
-            | replace('trigger.calendar_event.description', 'event_description') }}
 
   # ── WhatsApp ────────────────────────────────────────────────────────────────
   - choose:
@@ -615,9 +548,7 @@ action:
       sequence:
         - action: "{{ whatsapp_service }}"
           data:
-            message: >-
-              {{ whatsapp_message
-                  | replace('{{ trigger.calendar_event.summary }}', event_summary)
+            message: "{{ whatsapp_message }}"', event_summary)
                   | replace('{{ trigger.calendar_event.description }}', event_description) }}
 
   # ── HTML5 ───────────────────────────────────────────────────────────────────
@@ -629,14 +560,8 @@ action:
       sequence:
         - action: "{{ html5_notify_target }}"
           data:
-            title: >-
-              {{ html5_title
-                  | replace('{{ trigger.calendar_event.summary }}', event_summary)
-                  | replace('{{ trigger.calendar_event.description }}', event_description) }}
-            message: >-
-              {{ html5_message
-                  | replace('{{ trigger.calendar_event.summary }}', event_summary)
-                  | replace('{{ trigger.calendar_event.description }}', event_description) }}
+            title: "{{ html5_title }}"
+            message: "{{ html5_message }}"
             data:
               url: "{{ html5_url }}"
 
