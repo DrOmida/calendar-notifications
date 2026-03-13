@@ -442,8 +442,9 @@ blueprint:
           selector:
             condition:
 
-mode: parallel
+mode: queued
 max_exceeded: silent
+max: 10
 
 variables:
   calendar: !input calendar
@@ -541,36 +542,39 @@ action:
 
   # ── WhatsApp ────────────────────────────────────────────────────────────────
   - choose:
-    - alias: "Send WhatsApp notification if enabled"
-      conditions:
-        - condition: template
-          value_template: "{{ include_whatsapp_notify == 'enable_whatsapp_notify' }}"
-      sequence:
-        - action: "{{ whatsapp_service }}"
-          data:
-            message: "{{ whatsapp_message }}"
+      - alias: "Send WhatsApp notification if enabled"
+        conditions:
+          - condition: template
+            value_template: "{{ include_whatsapp_notify == 'enable_whatsapp_notify' }}"
+        sequence:
+          - action: "{{ whatsapp_service }}"
+            data:
+              message: >-
+                {{ whatsapp_message | trim }}
 
   # ── HTML5 ───────────────────────────────────────────────────────────────────
   - choose:
-    - alias: "Send HTML5 notification if enabled"
-      conditions:
-        - condition: template
-          value_template: "{{ include_html5_notify == 'enable_html5_notify' }}"
-      sequence:
-        - action: "{{ html5_notify_target }}"
-          data:
-            title: "{{ html5_title }}"
-            message: "{{ html5_message }}"
+      - alias: "Send HTML5 notification if enabled"
+        conditions:
+          - condition: template
+            value_template: "{{ include_html5_notify == 'enable_html5_notify' }}"
+        sequence:
+          - action: "{{ html5_notify_target }}"
             data:
-              url: "{{ html5_url }}"
+              title: >-
+                {{ html5_title | trim }}
+              message: >-
+                {{ html5_message | trim }}
+              data:
+                url: "{{ html5_url }}"
 
   # ── Mobile App ──────────────────────────────────────────────────────────────
   - choose:
-    - alias: "Send mobile app notification if enabled"
-      conditions:
-        - condition: template
-          value_template: "{{ include_start_notify == 'enable_start_notify_options' }}"
-      sequence:
+      - alias: "Send mobile app notification if enabled"
+        conditions:
+          - condition: template
+            value_template: "{{ include_start_notify == 'enable_start_notify_options' }}"
+        sequence:
         - variables:
             action_button_1: "{{ 'BUTTON_1_' ~ context.id }}"
             action_button_2: "{{ 'BUTTON_2_' ~ context.id }}"
@@ -786,20 +790,20 @@ action:
 
   # ── Auto Actions ────────────────────────────────────────────────────────────
   - choose:
-    - alias: "Auto action 1"
-      conditions:
-        - condition: template
-          value_template: "{{ 'enable_start_action_1' in include_start_auto_actions }}"
-      sequence: !input start_action_1
+      - alias: "Auto action 1"
+        conditions:
+          - condition: template
+            value_template: "{{ 'enable_start_action_1' in include_start_auto_actions }}"
+        sequence: !input start_action_1
   - choose:
-    - alias: "Auto action 2"
-      conditions:
-        - condition: template
-          value_template: "{{ 'enable_start_action_2' in include_start_auto_actions }}"
-      sequence: !input start_action_2
+      - alias: "Auto action 2"
+        conditions:
+          - condition: template
+            value_template: "{{ 'enable_start_action_2' in include_start_auto_actions }}"
+        sequence: !input start_action_2
   - choose:
-    - alias: "Auto action 3"
-      conditions:
-        - condition: template
-          value_template: "{{ 'enable_start_action_3' in include_start_auto_actions }}"
-      sequence: !input start_action_3
+      - alias: "Auto action 3"
+        conditions:
+          - condition: template
+            value_template: "{{ 'enable_start_action_3' in include_start_auto_actions }}"
+        sequence: !input start_action_3
